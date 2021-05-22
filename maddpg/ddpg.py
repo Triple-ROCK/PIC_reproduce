@@ -54,13 +54,15 @@ class MADDPG:
         self.act_shape = args.act_shape
         self.n_agents = args.n_agents
         self.critic_type = args.critic_type
+        self.device = args.device
 
-        self.actor = Actor(args.mlp_hidden_dim, self.obs_shape, self.act_shape)
-        self.critic = Critic(args.mlp_hidden_dim, self.obs_shape, self.act_shape, self.n_agents, self.critic_type)
+        self.actor = Actor(args.mlp_hidden_dim, self.obs_shape, self.act_shape).to(self.device)
+        self.critic = Critic(args.mlp_hidden_dim, self.obs_shape, self.act_shape,
+                             self.n_agents, self.critic_type).to(self.device)
 
         # create target-Q and target-actor
-        self.actor_target = deepcopy(self.actor)
-        self.critic_target = deepcopy(self.critic)
+        self.actor_target = deepcopy(self.actor).to(self.device)
+        self.critic_target = deepcopy(self.critic).to(self.device)
         for p in list(self.actor_target.parameters()) + list(self.critic_target.parameters()):
             p.requires_grad = False
 
@@ -82,23 +84,23 @@ class MADDPG:
         if self.args.discrete_action_space:
             if not deterministic:
                 noise = np.log(-np.log(np.random.uniform(0, 1, mu.shape)))
-                mu -= torch.tensor(noise, dtype=torch.float32)
+                mu -= torch.tensor(noise, dtype=torch.float32).to(self.device)
             action = F.softmax(mu, dim=1)
         else:
             mu = torch.tanh(mu)
             if not deterministic:
                 noise = self.noise_scale * np.random.randn(*mu.shape)
-                mu -= torch.tensor(noise, dtype=torch.float32)
+                mu -= torch.tensor(noise, dtype=torch.float32).to(self.device)
             action = mu.clamp(-1, 1)
 
         if require_grad:
             return action, mu
         else:
-            return action.detach().numpy()
+            return action.detach().cpu().numpy()
 
     def learn(self, batch):
         for key in batch.keys():  # 把batch里的数据转化成tensor
-            batch[key] = torch.tensor(batch[key], dtype=torch.float32)
+            batch[key] = torch.tensor(batch[key], dtype=torch.float32).to(self.device)
         o, u, r, o_next, done = batch['o'], batch['u'], batch['r'], batch['o_next'], batch['done']
 
         # 維度(batch_size, n_agents, act_shape)
@@ -106,8 +108,8 @@ class MADDPG:
 
         # update Q-network
         self.critic_optimizer.zero_grad()
-        q_target = self.critic_target(o_next, torch.tensor(target_u_next, dtype=torch.float32))  # 維度(batch_size, 1)
-        backup = r + self.gamma * (1 - done) * q_target
+        q_target = self.critic_target(o_next, torch.tensor(target_u_next, dtype=torch.float32).to(self.device))
+        backup = r + self.gamma * (1 - done) * q_target  # 維度(batch_size, 1)
 
         q = self.critic(o, u)  # 維度(batch_size, 1)
         loss_q = ((backup - q) ** 2).mean()

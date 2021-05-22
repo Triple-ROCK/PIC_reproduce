@@ -34,6 +34,8 @@ class RL_trainer:
         args.obs_shape = self.env.observation_space[0].shape[0]
         args.save_dir = os.path.join(args.save_dir, args.exp_name)
         args.n_agents = self.env.n
+        args.device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
+        self.device = args.device
         self.best_eval_reward = -100000000
 
         self.agent = MADDPG(args)
@@ -56,7 +58,7 @@ class RL_trainer:
             obs_n, ep_ret, ep_len, done = self.env.reset(), 0, 0, False
             while not done and ep_len < self.args.max_episode_len:
                 if time_steps > self.args.start_steps:
-                    action_n = self.agent.chooce_action(torch.tensor(obs_n, dtype=torch.float32))
+                    action_n = self.agent.chooce_action(torch.tensor(obs_n, dtype=torch.float32).to(self.device))
                 else:
                     action_n = [self.env.action_space[i].sample() for i in range(self.args.n_agents)]
                     if self.args.discrete_action_space:
@@ -101,7 +103,8 @@ class RL_trainer:
                 if render:
                     self.test_env.render()
                     time.sleep(1e-1)
-                action_n = self.agent.chooce_action(torch.tensor(obs_n, dtype=torch.float32), deterministic=True)
+                action_n = self.agent.chooce_action(torch.tensor(obs_n, dtype=torch.float32).to(self.device),
+                                                    deterministic=True)
                 obs_n, rew_n, done_n, info_n = self.test_env.step(deepcopy(action_n))
                 done = all(done_n)
                 ep_ret += np.sum(rew_n)

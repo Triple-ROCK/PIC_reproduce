@@ -20,13 +20,14 @@ def get_variable_args():
     parser.add_argument('--polyak', type=float, default=0.99)
     parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument('--discrete_action_space', '-d', default=False, action='store_true')
+    parser.add_argument('--cuda', default=False, action='store_true')
 
     # warm start
     parser.add_argument('--start_steps', type=int, default=int(1e4), help="random action steps")
     parser.add_argument('--replay_start', type=int, default=int(8e3), help="replay when you have enough data")
 
     # checkpoint
-    parser.add_argument('--save_dir', type=str, default="./data", help='model directory of the policy')
+    parser.add_argument('--save_dir', type=str, default="../data", help='model directory of the policy')
     parser.add_argument('--exp_name', type=str, default='test', help='name of the experiment')
 
     args = parser.parse_args()
