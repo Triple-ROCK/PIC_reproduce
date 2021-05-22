@@ -3,7 +3,7 @@ import time
 import numpy as np
 import os.path as osp
 import torch
-from maddpg.logger import EpochLogger
+from logger import EpochLogger
 
 
 def load_policy(fpath):

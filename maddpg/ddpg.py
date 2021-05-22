@@ -7,8 +7,8 @@ import numpy as np
 from torch.nn.utils import clip_grad_norm_
 from torch.optim import Adam
 
-from maddpg.models import model_factory
-from maddpg.utils import adjust_lr
+from models import model_factory
+from utils import adjust_lr
 
 
 class Actor(nn.Module):
@@ -74,12 +74,10 @@ class MADDPG:
         self.noise_scale = args.noise_scale
 
     def chooce_action(self, obs, deterministic=False, use_target=False, require_grad=False):
-        assert len(obs.shape) > 1, 'you should provide a batch-axis'
-
         if use_target:
-            mu = self.actor_target(torch.tensor(obs, dtype=torch.float32))
+            mu = self.actor_target(obs)
         else:
-            mu = self.actor(torch.tensor(obs, dtype=torch.float32))
+            mu = self.actor(obs)
 
         if self.args.discrete_action_space:
             if not deterministic:

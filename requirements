@@ -1,0 +1,5 @@
+torch==1.1.0
+gym==0.10.9
+joblib
+mpi4py
+matplotlib

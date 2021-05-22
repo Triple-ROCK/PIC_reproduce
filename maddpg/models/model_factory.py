@@ -1,7 +1,7 @@
 """Implements a model factory."""
 
 import functools
-from maddpg.models import graph_net
+from models import graph_net
 
 MODEL_MAP = {
     'gcn_mean': functools.partial(graph_net.GraphNet, pool_type='avg'),

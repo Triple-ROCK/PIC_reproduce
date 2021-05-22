@@ -63,5 +63,5 @@ def onehot(action_n, n_actions):
     for action in action_n:
         action_onehot = np.zeros(n_actions)
         action_onehot[action] = 1
-        actions.append(action)
+        actions.append(action_onehot)
     return actions

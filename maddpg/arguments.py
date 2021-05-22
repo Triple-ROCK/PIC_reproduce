@@ -21,6 +21,10 @@ def get_variable_args():
     parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument('--discrete_action_space', '-d', default=False, action='store_true')
 
+    # warm start
+    parser.add_argument('--start_steps', type=int, default=int(1e4), help="random action steps")
+    parser.add_argument('--replay_start', type=int, default=int(8e3), help="replay when you have enough data")
+
     # checkpoint
     parser.add_argument('--save_dir', type=str, default="./data", help='model directory of the policy')
     parser.add_argument('--exp_name', type=str, default='test', help='name of the experiment')
@@ -35,11 +39,9 @@ def get_default_args(args):
     # collect update_every steps of data, then update network for update_times steps
     args.update_every = 100
     args.update_times = 8
-    args.start_steps = int(1e4)
 
     # experience replay
     args.buffer_size = int(1e6)
-    args.replay_start = int(8e3)
 
     # how often to evaluate the model
     args.evaluate_cycle = int(5e3)
