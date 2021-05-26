@@ -8,7 +8,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.optim import Adam
 
 from models import model_factory
-from utils import adjust_lr
+from utils import adjust_lr_, adjust_noise_scale
 
 
 class Actor(nn.Module):
@@ -17,8 +17,8 @@ class Actor(nn.Module):
         self.linear1 = nn.Linear(num_inputs, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
         self.mu = nn.Linear(hidden_size, num_outputs)
-        self.mu.weight.data.mul_(0.1)
-        self.mu.bias.data.mul_(0.1)
+        # self.mu.weight.data.mul_(0.1)
+        # self.mu.bias.data.mul_(0.1)
 
     def forward(self, inputs):
         x = inputs
@@ -55,6 +55,7 @@ class MADDPG:
         self.n_agents = args.n_agents
         self.critic_type = args.critic_type
         self.device = args.device
+        self.discrete_action_space = args.discrete_action_space
 
         self.actor = Actor(args.mlp_hidden_dim, self.obs_shape, self.act_shape).to(self.device)
         self.critic = Critic(args.mlp_hidden_dim, self.obs_shape, self.act_shape,
@@ -73,7 +74,7 @@ class MADDPG:
         # training configurations
         self.gamma = args.gamma
         self.polyak = args.polyak
-        self.noise_scale = args.noise_scale
+        self.noise_scale = args.noise_init
 
     def chooce_action(self, obs, deterministic=False, use_target=False, require_grad=False):
         if use_target:
@@ -81,7 +82,7 @@ class MADDPG:
         else:
             mu = self.actor(obs)
 
-        if self.args.discrete_action_space:
+        if self.discrete_action_space:
             if not deterministic:
                 noise = np.log(-np.log(np.random.uniform(0, 1, mu.shape)))
                 mu -= torch.tensor(noise, dtype=torch.float32).to(self.device)
@@ -144,8 +145,13 @@ class MADDPG:
 
     def adjust_lr(self, i_episode):
         start_episode = self.args.start_steps // self.args.max_episode_len
-        adjust_lr(self.actor_optimizer, self.args.actor_lr, i_episode, self.args.num_episodes, start_episode)
-        adjust_lr(self.critic_optimizer, self.args.critic_lr, i_episode, self.args.num_episodes, start_episode)
+        adjust_lr_(self.actor_optimizer, self.args.actor_lr, i_episode, self.args.num_episodes, start_episode)
+        adjust_lr_(self.critic_optimizer, self.args.critic_lr, i_episode, self.args.num_episodes, start_episode)
+
+    def adjust_noise_scale(self, i_episode):
+        start_episode = self.args.num_episodes // 2
+        self.noise_scale = adjust_noise_scale(self.args.noise_init, self.args.noise_final, i_episode,
+                                              self.args.num_episodes, start_episode)
 
     def soft_update(self, source, target):
         with torch.no_grad():

@@ -213,6 +213,10 @@ class Logger:
             if hasattr(self, 'pytorch_saver_elements'):
                 self._pytorch_simple_save(itr)
 
+    def save_final_agent(self):
+        if proc_id() == 0:
+            self._pytorch_simple_save(final=True)
+
     def setup_pytorch_saver(self, what_to_save):
         """
         Set up easy model saving for a single PyTorch model.
@@ -229,7 +233,7 @@ class Logger:
         """
         self.pytorch_saver_elements = what_to_save
 
-    def _pytorch_simple_save(self, itr=None):
+    def _pytorch_simple_save(self, itr=None, final=False):
         """
         Saves the PyTorch model (or models).
         """
@@ -238,7 +242,10 @@ class Logger:
                 "First have to setup saving with self.setup_pytorch_saver"
             fpath = 'pyt_save'
             fpath = osp.join(self.output_dir, fpath)
-            fname = 'model' + ('%d' % itr if itr is not None else '') + '.pt'
+            if final:
+                fname = 'final_model.pt'
+            else:
+                fname = 'model' + ('%d' % itr if itr is not None else '') + '.pt'
             fname = osp.join(fpath, fname)
             os.makedirs(fpath, exist_ok=True)
             with warnings.catch_warnings():

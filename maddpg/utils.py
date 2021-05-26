@@ -2,13 +2,22 @@ import csv
 import numpy as np
 
 
-def adjust_lr(optimizer, init_lr, episode_i, num_episode, start_episode):
+def adjust_lr_(optimizer, init_lr, episode_i, num_episode, start_episode):
     if episode_i < start_episode:
         return init_lr
     lr = init_lr * (1 - (episode_i - start_episode) / (num_episode - start_episode))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
     return lr
+
+
+def adjust_noise_scale(init_scale, final_scale, episode_i, num_episode, start_episode):
+    if episode_i < start_episode:
+        return init_scale
+    elif episode_i > start_episode + num_episode:
+        return final_scale
+    fraction = (episode_i - start_episode) / (num_episode - start_episode)
+    return init_scale + fraction * (final_scale - init_scale)
 
 
 def dict2csv(output_dict, f_name):

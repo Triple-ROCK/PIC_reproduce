@@ -12,10 +12,13 @@ def get_variable_args():
     # training configuration
     parser.add_argument('--critic_type', type=str, default='gcn_max', help='the type of the critic')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
-    parser.add_argument('--noise_scale', type=float, default=0.1, help='initial noise scale (default: 0.1)')
+    parser.add_argument('--noise_init', type=float, default=0.1, help='init noise scale')
+    parser.add_argument('--noise_final', type=float, default=0, help='final noise scale')
     parser.add_argument('--actor_lr', type=float, default=1e-2)
     parser.add_argument('--critic_lr', type=float, default=1e-2)
     parser.add_argument('--fixed_lr', default=False, action='store_true')
+    parser.add_argument('--noise_scale_schedule', '-nss', default=False, action='store_true',
+                        help='start annealing noise scale in the middle of the training')
     parser.add_argument('--mlp_hidden_dim', type=int, default=128)
     parser.add_argument('--polyak', type=float, default=0.99)
     parser.add_argument('--batch_size', type=int, default=1024)
@@ -24,7 +27,7 @@ def get_variable_args():
 
     # warm start
     parser.add_argument('--start_steps', type=int, default=int(1e4), help="random action steps")
-    parser.add_argument('--replay_start', type=int, default=int(8e3), help="replay when you have enough data")
+    parser.add_argument('--replay_start', type=int, default=int(2e3), help="replay when you have enough data")
 
     # checkpoint
     parser.add_argument('--save_dir', type=str, default="../data", help='model directory of the policy')

@@ -12,7 +12,9 @@ def load_policy(fpath):
     fname = osp.join(fpath, 'model.pt')
     print('\n\nLoading from %s.\n\n' % fname)
 
-    agent = torch.load(fname)
+    agent = torch.load(fname, map_location='cpu')
+    agent.actor.cpu()
+    agent.args.device = 'cpu'
 
     # make function for producing an action given a single state
     def get_action(obs_n):
@@ -29,7 +31,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
     while episode < num_episodes:
         if render:
             env.render()
-            # time.sleep(1e-1)
+            time.sleep(1e-1)
         action_n = get_action(obs_n)
         obs_n, rew_n, done_n, _ = env.step(action_n)
         ep_ret += np.sum(rew_n)
@@ -49,7 +51,7 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
 
 if __name__ == '__main__':
     import argparse
-    from maddpg.utils import make_env
+    from utils import make_env
 
     parser = argparse.ArgumentParser()
     parser.add_argument('fpath', type=str)

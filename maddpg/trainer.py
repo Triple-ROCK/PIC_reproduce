@@ -11,6 +11,7 @@ import utils
 import torch
 import numpy as np
 import os
+import random
 
 
 class RL_trainer:
@@ -26,6 +27,7 @@ class RL_trainer:
         self.test_env.seed(args.seed)
         torch.manual_seed(args.seed)
         np.random.seed(args.seed)
+        random.seed(args.seed)
 
         if args.discrete_action_space:
             args.act_shape = utils.n_actions(self.env.action_space)[0]
@@ -67,7 +69,7 @@ class RL_trainer:
                 new_obs_n, rew_n, done_n, info_n = self.env.step(deepcopy(action_n))
                 done = all(done_n)
                 self.buffer.store(np.array(obs_n), np.array(action_n),
-                                  np.sum(rew_n), np.array(new_obs_n), done)
+                                  np.mean(rew_n), np.array(new_obs_n), done)  # It is necessary to use np.mean(rew_n)
 
                 obs_n = new_obs_n
                 ep_ret += np.sum(rew_n)  # use sum for better comparison with the paper
@@ -95,6 +97,9 @@ class RL_trainer:
             self.logger.store(EpRet=ep_ret)
             if not self.args.fixed_lr:
                 self.agent.adjust_lr(episodes)
+            if self.args.noise_scale_schedule:
+                self.agent.adjust_noise_scale(episodes)
+        self.logger.save_final_agent()
 
     def evaluate(self, render=False):
         for i in range(32):
@@ -119,6 +124,7 @@ class RL_trainer:
         logger.log_tabular('EpRet')
         logger.log_tabular('TestEpRet')
         logger.log_tabular('pi_lr', self.agent.actor_optimizer.param_groups[0]['lr'])
+        logger.log_tabular('noise_scale', self.agent.noise_scale)
         logger.log_tabular('LossPi', average_only=True)
         logger.log_tabular('LossQ', average_only=True)
         logger.log_tabular('QVals', with_min_and_max=True)

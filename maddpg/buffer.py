@@ -10,11 +10,11 @@ class ReplayBuffer:
         # memory management
         self.ptr, self.size, self.max_size = 0, 0, self.args.buffer_size
         # create the buffer to store info
-        self.buffers = {'o': np.empty([self.max_size, self.n_agents, self.obs_shape]),
-                        'u': np.empty([self.max_size, self.n_agents, self.act_shape]),
-                        'r': np.empty([self.max_size, 1]),
-                        'o_next': np.empty([self.max_size, self.n_agents, self.obs_shape]),
-                        'done': np.empty([self.max_size, 1])
+        self.buffers = {'o': np.empty([self.max_size, self.n_agents, self.obs_shape], dtype=np.float32),
+                        'u': np.empty([self.max_size, self.n_agents, self.act_shape], dtype=np.float32),
+                        'r': np.empty([self.max_size, 1], dtype=np.float32),
+                        'o_next': np.empty([self.max_size, self.n_agents, self.obs_shape], dtype=np.float32),
+                        'done': np.empty([self.max_size, 1], dtype=np.float32)
                         }
 
     def store(self, obs, act, rew, next_obs, done):
