@@ -10,6 +10,7 @@ def get_variable_args():
     parser.add_argument('--num_episodes', type=int, default=60000)
 
     # training configuration
+    parser.add_argument('--alg', type=str, default='ddpg', help='which algorithm do you run')
     parser.add_argument('--critic_type', type=str, default='gcn_max', help='the type of the critic')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
     parser.add_argument('--noise_init', type=float, default=0.1, help='init noise scale')
@@ -29,6 +30,9 @@ def get_variable_args():
     parser.add_argument('--start_steps', type=int, default=int(1e4), help="random action steps")
     parser.add_argument('--replay_start', type=int, default=int(2e3), help="replay when you have enough data")
 
+    parser.add_argument('--update_every', type=int, default=100, help="how many steps between successive training epoch")
+    parser.add_argument('--update_times', type=int, default=8, help="how many updates in one training epoch")
+
     # checkpoint
     parser.add_argument('--save_dir', type=str, default="../data", help='model directory of the policy')
     parser.add_argument('--exp_name', type=str, default='test', help='name of the experiment')
@@ -39,11 +43,6 @@ def get_variable_args():
 
 # arguments of maddpg
 def get_default_args(args):
-
-    # collect update_every steps of data, then update network for update_times steps
-    args.update_every = 100
-    args.update_times = 8
-
     # experience replay
     args.buffer_size = int(1e6)
 
@@ -55,3 +54,9 @@ def get_default_args(args):
     args.grad_norm_clipping = 0.5
 
     return args
+
+
+def get_td3_args(args):
+    args.target_noise = 0.2
+    args.policy_delay = 2
+    args.noise_clip = 0.5

@@ -12,12 +12,13 @@ from utils import adjust_lr_, adjust_noise_scale
 
 
 class Actor(nn.Module):
-    def __init__(self, hidden_size, num_inputs, num_outputs, act_limit):
+    def __init__(self, hidden_size, num_inputs, num_outputs):
         super(Actor, self).__init__()
         self.linear1 = nn.Linear(num_inputs, hidden_size)
         self.linear2 = nn.Linear(hidden_size, hidden_size)
         self.mu = nn.Linear(hidden_size, num_outputs)
-        self.act_limit = act_limit
+        # self.mu.weight.data.mul_(0.1)
+        # self.mu.bias.data.mul_(0.1)
 
     def forward(self, inputs):
         x = inputs
@@ -26,7 +27,6 @@ class Actor(nn.Module):
         x = self.linear2(x)
         x = F.relu(x)
         mu = self.mu(x)
-        mu = torch.tanh(mu) * self.act_limit
         return mu
 
 
@@ -47,22 +47,7 @@ class Critic(nn.Module):
         return V
 
 
-class ActorCritic(nn.Module):
-
-    def __init__(self, mlp_hidden_dim, obs_shape, act_shape, act_limit, num_agents, critic_type):
-        super().__init__()
-
-        # build policy and value functions
-        self.pi = Actor(mlp_hidden_dim, obs_shape, act_shape, act_limit)
-        self.q1 = Critic(mlp_hidden_dim, obs_shape, act_shape, num_agents, critic_type)
-        self.q2 = Critic(mlp_hidden_dim, obs_shape, act_shape, num_agents, critic_type)
-
-    def act(self, obs):
-        with torch.no_grad():
-            return self.pi(obs).numpy()
-
-
-class TD3:
+class MADDPG:
     def __init__(self, args):
         self.args = args
         self.obs_shape = args.obs_shape
@@ -70,8 +55,11 @@ class TD3:
         self.n_agents = args.n_agents
         self.critic_type = args.critic_type
         self.device = args.device
+        self.discrete_action_space = args.discrete_action_space
 
-        self.ac = ActorCritic(args.mlp_hidden_dim, self.obs_shape, self.act_shape, ).to(self.device)
+        self.actor = Actor(args.mlp_hidden_dim, self.obs_shape, self.act_shape).to(self.device)
+        self.critic = Critic(args.mlp_hidden_dim, self.obs_shape, self.act_shape,
+                             self.n_agents, self.critic_type).to(self.device)
 
         # create target-Q and target-actor
         self.actor_target = deepcopy(self.actor).to(self.device)
@@ -88,13 +76,30 @@ class TD3:
         self.polyak = args.polyak
         self.noise_scale = args.noise_init
 
-    def chooce_action(self, obs, deterministic=False):
-        a = self.ac.act(torch.tensor(obs, dtype=torch.float32).to(self.device))
-        if not deterministic:
-            a += self.noise_scale * np.random.randn(*a.shape)
-        return np.clip(a, -self.act_limit, self.act_limit)
+    def chooce_action(self, obs, deterministic=False, use_target=False, require_grad=False):
+        if use_target:
+            mu = self.actor_target(obs)
+        else:
+            mu = self.actor(obs)
 
-    def learn(self, batch):
+        if self.discrete_action_space:
+            if not deterministic:
+                noise = np.log(-np.log(np.random.uniform(0, 1, mu.shape)))
+                mu -= torch.tensor(noise, dtype=torch.float32).to(self.device)
+            action = F.softmax(mu, dim=1)
+        else:
+            mu = torch.tanh(mu)
+            if not deterministic:
+                noise = self.noise_scale * np.random.randn(*mu.shape)
+                mu -= torch.tensor(noise, dtype=torch.float32).to(self.device)
+            action = mu.clamp(-1, 1)
+
+        if require_grad:
+            return action, mu
+        else:
+            return action.detach().cpu().numpy()
+
+    def learn(self, batch, logger, time_steps=0):
         for key in batch.keys():  # 把batch里的数据转化成tensor
             batch[key] = torch.tensor(batch[key], dtype=torch.float32).to(self.device)
         o, u, r, o_next, done = batch['o'], batch['u'], batch['r'], batch['o_next'], batch['done']
@@ -135,8 +140,8 @@ class TD3:
         # update target network by polyak averaging
         self.soft_update(self.actor, self.actor_target)
         self.soft_update(self.critic, self.critic_target)
-
-        return [loss_pi.item(), loss_q.item(), q.mean().item(), pi_grad_norm, q_grad_norm]
+        logger.store(LossPi=loss_pi.item(), LossQ=loss_q.item(), QVals=q.mean().item(),
+                     pi_grad_norm=pi_grad_norm, q_grad_norm=q_grad_norm)
 
     def adjust_lr(self, i_episode):
         start_episode = self.args.start_steps // self.args.max_episode_len
@@ -153,4 +158,3 @@ class TD3:
             for p, p_targ in zip(source.parameters(), target.parameters()):
                 p_targ.data.mul_(self.polyak)
                 p_targ.data.add_((1 - self.polyak) * p.data)
-

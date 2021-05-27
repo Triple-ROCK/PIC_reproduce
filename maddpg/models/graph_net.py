@@ -66,6 +66,9 @@ class GraphNet(nn.Module):
             ret, _ = out.max(1)
         elif self.pool_type == 'sum':
             ret = out.sum(1)  # This is different from original implementation
+        elif self.pool_type == 'vdn':
+            ret = self.V(out)
+            return ret.sum(-2)
         else:
             raise NotImplementedError(self.pool_type + ' is not implemented!')
 

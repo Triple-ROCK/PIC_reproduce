@@ -13,7 +13,7 @@ def load_policy(fpath):
     print('\n\nLoading from %s.\n\n' % fname)
 
     agent = torch.load(fname, map_location='cpu')
-    agent.actor.cpu()
+    agent.ac.cpu()
     agent.args.device = 'cpu'
 
     # make function for producing an action given a single state

@@ -1,10 +1,11 @@
 import time
 from copy import deepcopy
 
-from arguments import get_variable_args, get_default_args
+from arguments import get_variable_args, get_default_args, get_td3_args
 from logger import EpochLogger
+from agents.td3 import TD3
 from utils import make_env, onehot
-from ddpg import MADDPG
+from agents.ddpg import MADDPG
 from buffer import ReplayBuffer
 
 import utils
@@ -33,14 +34,24 @@ class RL_trainer:
             args.act_shape = utils.n_actions(self.env.action_space)[0]
         else:
             args.act_shape = self.env.action_space[0].shape[0]
+        args.act_limit = self.env.action_space[0].high[0]
         args.obs_shape = self.env.observation_space[0].shape[0]
         args.save_dir = os.path.join(args.save_dir, args.exp_name)
         args.n_agents = self.env.n
+        args.replay_start = max(args.batch_size, args.replay_start)
         args.device = torch.device("cuda:0" if torch.cuda.is_available() and args.cuda else "cpu")
         self.device = args.device
         self.best_eval_reward = -100000000
 
-        self.agent = MADDPG(args)
+        if args.alg == 'ddpg':
+            self.agent = MADDPG(args)
+            var_counts = tuple(utils.count_vars(module) for module in [self.agent.actor, self.agent.critic])
+        elif args.alg == 'td3':
+            self.agent = TD3(args)
+            var_counts = tuple(utils.count_vars(module) for module in [self.agent.ac.pi, self.agent.ac.q1])
+            args.update_times *= 2  # update more to get better policy
+        else:
+            raise NotImplementedError
         self.buffer = ReplayBuffer(args)
 
         # set up logger
@@ -48,7 +59,6 @@ class RL_trainer:
         self.logger.save_config(args)
 
         # Count variables
-        var_counts = tuple(utils.count_vars(module) for module in [self.agent.actor, self.agent.critic])
         self.logger.log('\nNumber of parameters: \t actor: %d, \t critic: %d\n' % var_counts)
 
         # set up saver
@@ -77,11 +87,9 @@ class RL_trainer:
 
                 if time_steps % self.args.update_every == 0 and time_steps > self.args.replay_start:
                     # collect update_every steps, then update network
-                    for _ in range(self.args.update_times):
+                    for i in range(self.args.update_times):
                         batch = self.buffer.sample(self.args.batch_size)
-                        loss_pi, loss_q, qvals, pi_grad_norm, q_grad_norm = self.agent.learn(batch)
-                        self.logger.store(LossPi=loss_pi, LossQ=loss_q, QVals=qvals,
-                                          pi_grad_norm=pi_grad_norm, q_grad_norm=q_grad_norm)
+                        self.agent.learn(batch, self.logger, i)
 
                 if time_steps % self.args.evaluate_cycle == 0 and time_steps > self.args.replay_start:
                     self.evaluate()
@@ -136,6 +144,8 @@ class RL_trainer:
 def main():
     args = get_variable_args()
     args = get_default_args(args)
+    if args.alg == 'td3':
+        args = get_td3_args(args)
     trainer = RL_trainer(args)
     trainer.train()
 
