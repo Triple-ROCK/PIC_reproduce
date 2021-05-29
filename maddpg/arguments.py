@@ -4,9 +4,9 @@ import argparse
 def get_variable_args():
     parser = argparse.ArgumentParser()
     # the environment setting
-    parser.add_argument('--scenario', type=str, default='simple_spread_n6', help='the scenario of the particle-env')
+    parser.add_argument('--scenario', type=str, default='simple_hit_n15', help='the scenario of the particle-env')
     parser.add_argument('--seed', type=int, default=0, help='random seed')
-    parser.add_argument('--max_episode_len', '-len', type=int, default=25, help="max length of one episode")
+    parser.add_argument('--max_episode_len', '-len', type=int, default=50, help="max length of one episode")
     parser.add_argument('--num_episodes', type=int, default=60000)
 
     # training configuration
@@ -60,3 +60,5 @@ def get_td3_args(args):
     args.target_noise = 0.2
     args.policy_delay = 2
     args.noise_clip = 0.5
+    args.update_times = 32
+    return args

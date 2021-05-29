@@ -6,14 +6,20 @@ import torch
 from logger import EpochLogger
 
 
-def load_policy(fpath):
+def load_policy(fpath, final=False):
     """ Load a pytorch policy saved with Spinning Up Logger."""
 
-    fname = osp.join(fpath, 'model.pt')
+    file_name = 'final_model.pt' if final else 'model.pt'
+    fname = osp.join(fpath, file_name)
     print('\n\nLoading from %s.\n\n' % fname)
 
     agent = torch.load(fname, map_location='cpu')
-    agent.ac.cpu()
+    if hasattr(agent, 'ac'):
+        agent.ac.cpu()
+    elif hasattr(agent, 'actor'):
+        agent.actor.cpu()
+    else:
+        raise NotImplementedError
     agent.args.device = 'cpu'
 
     # make function for producing an action given a single state
@@ -55,13 +61,14 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('fpath', type=str)
-    parser.add_argument('--len', '-l', type=int, default=25)
+    parser.add_argument('--len', '-l', type=int, default=50)
     parser.add_argument("--scenario", type=str, help="name of the scenario script")
     parser.add_argument('--episodes', '-n', type=int, default=10)
     parser.add_argument('--norender', '-nr', action='store_true')
     parser.add_argument('--discrete_action_space', '-d', default=False, action='store_true')
+    parser.add_argument('--final', default=False, action="store_true")
     args = parser.parse_args()
     env = make_env(args.scenario, args)
-    get_action = load_policy(args.fpath)
+    get_action = load_policy(args.fpath, args.final)
 
     run_policy(env, get_action, args.len, args.episodes, not args.norender)

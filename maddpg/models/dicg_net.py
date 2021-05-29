@@ -71,8 +71,8 @@ class EncoderLayer(nn.Module):
         self.linear2 = nn.Linear(hidden_size, output_dim)
 
     def forward(self, inputs):
-        x = F.relu(self.linear1(inputs))
-        x = F.relu(self.linear2(x))
+        x = F.leaky_relu(self.linear1(inputs))
+        x = F.leaky_relu(self.linear2(x))
         return x
 
 
@@ -82,14 +82,11 @@ class DICGBase(nn.Module):
                  n_agents,
                  encoder_hidden_sizes=(128,),
                  embedding_dim=64,
-                 attention_type='general',
-                 n_gcn_layers=2,):
+                 attention_type='general'):
 
         super().__init__()
 
         self._embedding_dim = embedding_dim  # dev
-
-        self.n_gcn_layers = n_gcn_layers  # dev
 
         self.n_agents = n_agents
 
@@ -104,9 +101,9 @@ class DICGBase(nn.Module):
                                                attention_type=attention_type)
         self.layers.append(self.attention_layer)
 
-        self.gcn_layers = [GraphConvLayer(input_dim=self._embedding_dim,
-                                          output_dim=self._embedding_dim) for i in range(self.n_gcn_layers)
-                           ]
+        self.gc1 = GraphConvLayer(input_dim=self._embedding_dim, output_dim=self._embedding_dim)
+        self.gc2 = GraphConvLayer(input_dim=self._embedding_dim, output_dim=self._embedding_dim)
+        self.gcn_layers = [self.gc1, self.gc2]
         self.layers.extend(self.gcn_layers)
 
     def grad_norm(self):
@@ -126,7 +123,7 @@ class DICGBase(nn.Module):
 
         for i_layer, gcn_layer in enumerate(self.gcn_layers):
             # (batch_size, n_agents, emb_feat_dim)
-            embeddings_gcn = F.relu(gcn_layer(embeddings_collection[i_layer], attention_weights))
+            embeddings_gcn = F.leaky_relu(gcn_layer(embeddings_collection[i_layer], attention_weights))
             embeddings_collection.append(embeddings_gcn)
 
         return embeddings_collection, attention_weights
@@ -138,7 +135,6 @@ class DICGNet(DICGBase):
                  n_agents,
                  hidden_size,
                  attention_type='general',
-                 n_gcn_layers=2,
                  residual=True,
                  pool_type='vdn'):
         super().__init__(
@@ -147,7 +143,6 @@ class DICGNet(DICGBase):
             encoder_hidden_sizes=hidden_size,
             embedding_dim=hidden_size,
             attention_type=attention_type,
-            n_gcn_layers=n_gcn_layers,
         )
         self.residual = residual
         self.pool_type = pool_type

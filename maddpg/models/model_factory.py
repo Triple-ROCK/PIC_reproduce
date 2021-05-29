@@ -9,7 +9,7 @@ MODEL_MAP = {
     'gcn_sum': functools.partial(graph_net.GraphNet, pool_type='sum'),
     'gcn_vdn': functools.partial(graph_net.GraphNet, pool_type='vdn'),
 
-    'dicg_avj': functools.partial(dicg_net.DICGNet, pool_type='avg'),
+    'dicg_avg': functools.partial(dicg_net.DICGNet, pool_type='avg'),
     'dicg_max': functools.partial(dicg_net.DICGNet, pool_type='max'),
     'dicg_sum': functools.partial(dicg_net.DICGNet, pool_type='sum'),
     'dicg_vdn': functools.partial(dicg_net.DICGNet, pool_type='vdn'),

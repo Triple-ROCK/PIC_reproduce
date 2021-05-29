@@ -49,7 +49,6 @@ class RL_trainer:
         elif args.alg == 'td3':
             self.agent = TD3(args)
             var_counts = tuple(utils.count_vars(module) for module in [self.agent.ac.pi, self.agent.ac.q1])
-            args.update_times *= 2  # update more to get better policy
         else:
             raise NotImplementedError
         self.buffer = ReplayBuffer(args)
@@ -108,6 +107,7 @@ class RL_trainer:
             if self.args.noise_scale_schedule:
                 self.agent.adjust_noise_scale(episodes)
         self.logger.save_final_agent()
+        return self.best_eval_reward
 
     def evaluate(self, render=False):
         for i in range(32):
