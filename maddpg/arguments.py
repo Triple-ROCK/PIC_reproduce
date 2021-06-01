@@ -26,6 +26,9 @@ def get_variable_args():
     parser.add_argument('--discrete_action_space', '-d', default=False, action='store_true')
     parser.add_argument('--cuda', default=False, action='store_true')
 
+    # sac argument
+    parser.add_argument('--fixed_alpha', default=False, action='store_true')
+
     # warm start
     parser.add_argument('--start_steps', type=int, default=int(1e4), help="random action steps")
     parser.add_argument('--replay_start', type=int, default=int(2e3), help="replay when you have enough data")

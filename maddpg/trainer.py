@@ -1,6 +1,7 @@
 import time
 from copy import deepcopy
 
+from agents.sac import SAC
 from arguments import get_variable_args, get_default_args, get_td3_args
 from logger import EpochLogger
 from agents.td3 import TD3
@@ -48,6 +49,9 @@ class RL_trainer:
             var_counts = tuple(utils.count_vars(module) for module in [self.agent.actor, self.agent.critic])
         elif args.alg == 'td3':
             self.agent = TD3(args)
+            var_counts = tuple(utils.count_vars(module) for module in [self.agent.ac.pi, self.agent.ac.q1])
+        elif args.alg == 'sac':
+            self.agent = SAC(args)
             var_counts = tuple(utils.count_vars(module) for module in [self.agent.ac.pi, self.agent.ac.q1])
         else:
             raise NotImplementedError
@@ -132,12 +136,16 @@ class RL_trainer:
         logger.log_tabular('EpRet')
         logger.log_tabular('TestEpRet')
         logger.log_tabular('pi_lr', self.agent.actor_optimizer.param_groups[0]['lr'])
-        logger.log_tabular('noise_scale', self.agent.noise_scale)
         logger.log_tabular('LossPi', average_only=True)
         logger.log_tabular('LossQ', average_only=True)
         logger.log_tabular('QVals', with_min_and_max=True)
         logger.log_tabular('pi_grad_norm', average_only=True)
         logger.log_tabular('q_grad_norm', average_only=True)
+        if self.args.alg == 'sac':
+            logger.log_tabular('alpha', with_min_and_max=True, average_only=True)
+            logger.log_tabular('entropy')
+        else:
+            logger.log_tabular('noise_scale', self.agent.noise_scale)
         logger.dump_tabular()
 
 
