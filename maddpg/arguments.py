@@ -11,7 +11,7 @@ def get_variable_args():
 
     # training configuration
     parser.add_argument('--alg', type=str, default='ddpg', help='which algorithm do you run')
-    parser.add_argument('--critic_type', type=str, default='gcn_max', help='the type of the critic')
+    parser.add_argument('--critic_type', type=str, default='gcn_sum', help='the type of the critic')
     parser.add_argument('--gamma', type=float, default=0.95, help='discount factor')
     parser.add_argument('--noise_init', type=float, default=0.1, help='init noise scale')
     parser.add_argument('--noise_final', type=float, default=0, help='final noise scale')
@@ -39,6 +39,10 @@ def get_variable_args():
     # checkpoint
     parser.add_argument('--save_dir', type=str, default="../data", help='model directory of the policy')
     parser.add_argument('--exp_name', type=str, default='test', help='name of the experiment')
+
+    # webots configuration
+    parser.add_argument('--control_durations', type=int, default=4, help='how many steps between successive control')
+    parser.add_argument('--webots', default=False, action='store_true', help='Is webots simulation?')
 
     args = parser.parse_args()
     return args

@@ -22,11 +22,11 @@ class RL_trainer:
         # torch.set_num_threads(1)
 
         self.env = make_env(args.scenario, args)
-        self.test_env = make_env(args.scenario, args)
+        # self.test_env = self.env if args.webots else make_env(args.scenario, args)
 
         # random seed
         self.env.seed(args.seed)
-        self.test_env.seed(args.seed)
+        # self.test_env.seed(args.seed)
         torch.manual_seed(args.seed)
         np.random.seed(args.seed)
         random.seed(args.seed)
@@ -68,7 +68,7 @@ class RL_trainer:
         self.logger.setup_pytorch_saver(self.agent)
 
     def train(self):
-        time_steps, start_time, episodes = 0, time.time(), 0
+        time_steps, evaluate_steps, start_time, episodes = 0, 0, time.time(), 0
         while episodes < self.args.num_episodes:
             obs_n, ep_ret, ep_len, done = self.env.reset(), 0, 0, False
             while not done and ep_len < self.args.max_episode_len:
@@ -94,13 +94,15 @@ class RL_trainer:
                         batch = self.buffer.sample(self.args.batch_size)
                         self.agent.learn(batch, self.logger, i)
 
-                if time_steps % self.args.evaluate_cycle == 0 and time_steps > self.args.replay_start:
+                if time_steps // self.args.evaluate_cycle > evaluate_steps and \
+                        (done or ep_len >= self.args.max_episode_len):
                     self.evaluate()
                     test_ret = self.logger.get_stats('TestEpRet')[0]
                     if test_ret > self.best_eval_reward:
                         self.logger.save_state({})
                         self.best_eval_reward = test_ret
                     self.log_diagnostics(time_steps, start_time, episodes)
+                    evaluate_steps += 1
 
                 time_steps += 1
 
@@ -115,14 +117,14 @@ class RL_trainer:
 
     def evaluate(self, render=False):
         for i in range(32):
-            obs_n, ep_ret, ep_len, done = self.test_env.reset(), 0, 0, False
+            obs_n, ep_ret, ep_len, done = self.env.reset(), 0, 0, False
             while not done and ep_len < self.args.max_episode_len:
                 if render:
-                    self.test_env.render()
+                    self.env.render()
                     time.sleep(1e-1)
                 action_n = self.agent.chooce_action(torch.tensor(obs_n, dtype=torch.float32).to(self.device),
                                                     deterministic=True)
-                obs_n, rew_n, done_n, info_n = self.test_env.step(deepcopy(action_n))
+                obs_n, rew_n, done_n, info_n = self.env.step(deepcopy(action_n))
                 done = all(done_n)
                 ep_ret += np.sum(rew_n)
                 ep_len += 1

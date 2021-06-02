@@ -33,6 +33,14 @@ def count_vars(module):
 
 
 def make_env(scenario_name, arglist, benchmark=False):
+    if arglist.webots:
+        env = make_webots_env(scenario_name, arglist, benchmark)
+    else:
+        env = make_simple_env(scenario_name, arglist, benchmark)
+    return env
+
+
+def make_simple_env(scenario_name, arglist, benchmark):
     from multiagent.environment import MultiAgentEnv
     import multiagent.scenarios as scenarios
 
@@ -49,6 +57,17 @@ def make_env(scenario_name, arglist, benchmark=False):
         env = MultiAgentEnv(world, scenario.reset_world, scenario.reward, scenario.observation,
                             seed_callback=scenario.seed, cam_range=scenario.world_radius,
                             discrete_action_space=arglist.discrete_action_space)
+    return env
+
+
+def make_webots_env(scenario_name, arglist, benchmark):
+    from webotSim.environment import MultiRobotEnv
+    from webotSim.scenarios.spread_n15 import Scenario
+
+    scenario = Scenario(mode='diff', control_durations=arglist.control_durations)
+    env = MultiRobotEnv(scenario, reward_callback=scenario.reward, observation_callback=scenario.observation,
+                        info_callback=scenario.get_info, reset_callback=scenario.reset_world,
+                        done_callback=scenario.is_done)
     return env
 
 
